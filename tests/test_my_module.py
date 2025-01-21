@@ -5,7 +5,7 @@ Test for this module
 """
 
 
-from my_lib.my_module import some_function, MyClass
+from hqi.my_module import some_function, MyClass
 
 
 class TestMyClass:

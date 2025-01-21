@@ -3,31 +3,20 @@
 .. only:: header
 
     HQI-WP4 Project
-    ==============
+    ================
 
 .. only:: html
 
-    Welcome to the <PROJECT> documentation
+    Welcome to the HQI documentation
     ======================================
 
-    .. image:: logo-neasqc.svg
+    .. image:: logo_HQI_RVB.jpg
         :scale: 50%
         :align: center
         :alt: HQI-WP4 Project
 
 
-.. toctree-filt::
-    :maxdepth: 1
-    :caption: Basic usage
+.. toctree::
 
-.. toctree-filt::
-    :maxdepth: 1
-    :caption: Advanced usage
+    my_module
 
-.. toctree-filt::
-    :maxdepth: 2
-    :caption: Source code documentation
-
-.. toctree-filt::
-    :maxdepth: 1
-    :caption: Additional information
