@@ -11,6 +11,11 @@ The `LICENCE` file contains the default licence statement as specified in the pr
 For simplicity, an example of `setup.py` file is provided in this template.
 Feel free to modify it if you have exotic build recipes.
 
+To install:
+```bash
+pip install .
+```
+
 
 ## Coding conventions
 
@@ -55,17 +60,11 @@ python setup.py test
 This way, you can write tests either right next to the corresponding code (convenient) or in a `tests` folder at the root of the repository.
 
 ## Documentation
-Customize the GitHub Workflow YAML file: *repo_name*/.github/workflow/sphinx\_doc.yml
-There is a basic index.rst template under 'doc'. Modify it as you want.
+There is a basic my_module.rst template under 'doc'. Modify it as you want.
 
-Any modification under the folder 'doc' pushed to GitHub will trigger a rebuild of the documentation (using GitHub CI).
-If the build is successful, then the resulting html documentation can be access at: https://neasqc.github.io/repo_name
+To build the documentation locally:
+```bash
+sphinx-build -M html doc build
+```
 
-Notes: 
-  - You can follow the build process on the 'Actions' tab below the name of the repository.
-  - neasqc.github.io does not immediately update. You may need to wait a minute or two before it see the changes.
-
-## GitHub CI
-This repository contains a GitHub Workflow file that will automatically run pytest when changes are pushed.  
-Details on disabling and enabling this feature can be found [here](https://docs.github.com/en/enterprise-server@3.0/actions/managing-workflow-runs/disabling-and-enabling-a-workflow).
 
