@@ -2,3 +2,4 @@ nbsphinx
 sphinxcontrib.bibtex
 sphinxcontrib.programoutput
 sphinxcontrib.contentui
+sphinx-rtd-theme
