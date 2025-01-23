@@ -1,3 +1,4 @@
 nbsphinx
 sphinxcontrib.bibtex
 sphinxcontrib.programoutput
+sphinxcontrib.contentui
