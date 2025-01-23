@@ -1,2 +1,3 @@
 nbsphinx
-sphinxcontrib
+sphinxcontrib.bibtex
+sphinxcontrib.programoutput
