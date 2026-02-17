@@ -1,13 +1,11 @@
 import numpy as np
 import time
 import sys
-from qat.core import Observable,Term,Schedule 
+from qat.core import Observable, Term, Schedule
 from qat.core.variables import Variable
 
 
-
-
-def write_ising_ham(n,h,J,periodic) :
+def write_ising_ham(n, h, J, periodic):
     """
     Builds the operators, positions, and coefficients for an Ising Hamiltonian of the form: H = h * sum(Z_i) + J * sum(XX_{i,i+1})
 
@@ -24,24 +22,26 @@ def write_ising_ham(n,h,J,periodic) :
     
     operator = ['0' for i in range((2*n-1))]
     operator[:n] = ['Z' for i in range(n)]
-    operator[n:] = ['XX'for i in range(n,2*n-1)]
-    
+    operator[n:] = ['XX' for i in range(n, 2*n-1)]
+
     position = [[0] for i in range(2*n-1)]
     position[:n] = [[i] for i in range(n)]
-    position[n:] = [[i ,i+1] for i in range(n-1)]
-    
+    position[n:] = [[i, i+1] for i in range(n-1)]
+
     coeff = [[0] for i in range(2*n-1)]
     coeff[:n] = [h for i in range(n)]
-    coeff[n:] = [J for i in range(n,2*n -1)]
+    coeff[n:] = [J for i in range(n, 2*n-1)]
 
-    if periodic and n > 2 : 
+    if periodic and n > 2:
         operator.append('XX')
-        position.append([n-1,0])
+        position.append([n-1, 0])
         coeff.append(J)
-   
-    return operator,position,coeff
+
+    return operator, position, coeff
+
 ##################################################################
-def sched_rot(angle,axes,n):
+
+def sched_rot(angle, axes, n):
     """
     Creates a rotation schedule applied uniformly to all n qubits. Used to prepare the initial state before annealing, starting from the ferromagnetic side.
 
@@ -54,15 +54,15 @@ def sched_rot(angle,axes,n):
       Schedule object with tmax=1
 
     """
-    Rot=[Term(angle,axes,[i]) for i in range(n)]
-    rot_ham=Observable(n,pauli_terms=Rot)
-    drive_rot=[(1,rot_ham)]
-    schedule_rot=Schedule(drive=drive_rot,tmax=1)
+    Rot = [Term(angle, axes, [i]) for i in range(n)]
+    rot_ham = Observable(n, pauli_terms=Rot)
+    drive_rot = [(1, rot_ham)]
+    schedule_rot = Schedule(drive=drive_rot, tmax=1)
     return schedule_rot
 
 ############################################
 
-def density_def_ferro(n,periodic):
+def density_def_ferro(n, periodic):
     """Defines the ferromagnetic kink operator, counts the number of neighbouring spins not aligned: rho = (1/N) * sum(XX_{i,i+1}). It is used to measure how close the system is to the ferromagnetic ground state.
 
     Parameters:
@@ -73,19 +73,17 @@ def density_def_ferro(n,periodic):
       Observable (qat.core)
     """
     operator = ['XX' for i in range(n-1)]
-    position = [[i ,i+1] for i in range(n-1)]
+    position = [[i, i+1] for i in range(n-1)]
 
-    if periodic and n > 2 : 
+    if periodic and n > 2:
         operator.append('XX')
-        position.append([n-1,0])
+        position.append([n-1, 0])
 
-    coeff=[1/len(operator) for i in range(len(operator))]
-    Density=[Term(coeff[i],operator[i],position[i]) for i in range(len(operator))]
-    dens=Observable(n,pauli_terms=Density)
+    coeff = [1/len(operator) for i in range(len(operator))]
+    Density = [Term(coeff[i], operator[i], position[i]) for i in range(len(operator))]
+    dens = Observable(n, pauli_terms=Density)
     return dens
 
-
-####################################################################
 
 def density_def_para(n):
     """Defines the paramagnetic kink operator, counts the number of spins aligned in the opposite direction of the transverse magnetic field: rho = (1/N) * sum(Z_{i}). It is used to measure how close the system is to the paramagnetic ground state.
@@ -96,19 +94,16 @@ def density_def_para(n):
     Returns:
       Observable (qat.core)
     """
-    operator=['Z' for i in range(n)]
-    position=[[i] for i in range(n)]
+    operator = ['Z' for i in range(n)]
+    position = [[i] for i in range(n)]
 
-    coeff=[1/len(operator) for i in range(len(operator))]
-    Density=[Term(coeff[i],operator[i],position[i]) for i in range(len(operator))]
-    dens=Observable(n,pauli_terms=Density)
+    coeff = [1/len(operator) for i in range(len(operator))]
+    Density = [Term(coeff[i], operator[i], position[i]) for i in range(len(operator))]
+    dens = Observable(n, pauli_terms=Density)
     return dens
 
 
-
-#######################################################################
-
-def quantum_annealing_ferro(nb_spins,h_target,J_target,periodic,tau,qpu):
+def quantum_annealing_ferro(nb_spins, h_target, J_target, periodic, tau, qpu):
     """
     Runs a ferromagnetic quantum annealing protocol. The ramp back down is used to measure the defects generated in a known basis, so if we do not accumulate defects in the final state it means that we were close to the istantaneous ground state all along the time evolution.
 
@@ -131,48 +126,49 @@ def quantum_annealing_ferro(nb_spins,h_target,J_target,periodic,tau,qpu):
     Returns:
       float   Defect density = (1 - <rho_ferro>) / 2"""
 
-    start=time.time()
-           
-    t=Variable("t",float)
-    
-    schedule_rot=sched_rot(-np.pi/4,"Y",nb_spins)
-    
-    h_go=np.sign(h_target)*t/tau
-    time_go=np.abs(h_target)*tau
-    oper_ham,pos_oper_ham,coeff_ham =write_ising_ham(nb_spins,h_go,J_target,periodic)
-    Hamiltonian = [Term(coeff_ham[i],oper_ham[i],pos_oper_ham[i]) for i in range(len(oper_ham))]
-    ham=Observable(nb_spins,pauli_terms = Hamiltonian)
-    drive=[(1,ham)]
-    schedule_go=Schedule(drive=drive,tmax=time_go)
+    start = time.time()
 
-    h_back=h_target-np.sign(h_target)*t/tau
-    time_back=np.abs(h_target)*tau
-    oper_ham,pos_oper_ham,coeff_ham=write_ising_ham(nb_spins,h_back,J_target,periodic)
-    Hamiltonian=[Term(coeff_ham[i],oper_ham[i],pos_oper_ham[i]) for i in range(len(oper_ham))]
-    ham=Observable(nb_spins,pauli_terms = Hamiltonian)
-    drive=[(1,ham)]
-    schedule_back=Schedule(drive=drive,tmax=time_back)
-    
-    sched_fin=schedule_rot|schedule_go|schedule_back
-    
-    gs=np.zeros(2**nb_spins)
-    if nb_spins%2==0:
-        gs[0]=1/np.sqrt(2)
-        gs[-1]=1/np.sqrt(2)
+    t = Variable("t", float)
+
+    schedule_rot = sched_rot(-np.pi/4, "Y", nb_spins)
+
+    h_go = np.sign(h_target)*t/tau
+    time_go = np.abs(h_target)*tau
+    oper_ham, pos_oper_ham, coeff_ham = write_ising_ham(nb_spins, h_go, J_target, periodic)
+    Hamiltonian = [Term(coeff_ham[i], oper_ham[i], pos_oper_ham[i]) for i in range(len(oper_ham))]
+    ham = Observable(nb_spins, pauli_terms=Hamiltonian)
+    drive = [(1, ham)]
+    schedule_go = Schedule(drive=drive, tmax=time_go)
+
+    h_back = h_target-np.sign(h_target)*t/tau
+    time_back = np.abs(h_target)*tau
+    oper_ham, pos_oper_ham, coeff_ham = write_ising_ham(nb_spins, h_back, J_target, periodic)
+    Hamiltonian = [Term(coeff_ham[i], oper_ham[i], pos_oper_ham[i]) for i in range(len(oper_ham))]
+    ham = Observable(nb_spins, pauli_terms=Hamiltonian)
+    drive = [(1, ham)]
+    schedule_back = Schedule(drive=drive, tmax=time_back)
+
+    sched_fin = schedule_rot | schedule_go | schedule_back
+
+    gs = np.zeros(2**nb_spins)
+    if nb_spins % 2 == 0:
+        gs[0] = 1/np.sqrt(2)
+        gs[-1] = 1/np.sqrt(2)
     else:
-        gs[0]=1/np.sqrt(2)
-        gs[-1]=-1/np.sqrt(2)
-    
-    job_sample=sched_fin.to_job(psi_0=gs,observable=density_def_ferro(nb_spins,periodic))
-    res_sample=qpu.submit(job_sample)
-    job_num=res_sample.job_id
+        gs[0] = 1/np.sqrt(2)
+        gs[-1] = -1/np.sqrt(2)
+
+    job_sample = sched_fin.to_job(psi_0=gs, observable=density_def_ferro(nb_spins, periodic))
+    res_sample = qpu.submit(job_sample)
+    job_num = res_sample.job_id
     res_sample.join()
-        
-    stop=time.time()
-    #print('Run Time:%s'%(stop-start))
+
+    stop = time.time()
+    # print('Run Time:%s'%(stop-start))
     return (1-res_sample.value)/2
+
     
-def quantum_annealing_para(nb_spins,h_target,J_target,periodic,tau,qpu):
+def quantum_annealing_para(nb_spins, h_target, J_target, periodic, tau, qpu):
     """
     Runs a paramagnetic quantum annealing protocol. The ramp back down is used to measure the defects generated in a known basis, so if we do not accumulate defects in the final state it means that we were close to the istantaneous ground state all along the time evolution.
 
@@ -197,51 +193,51 @@ def quantum_annealing_para(nb_spins,h_target,J_target,periodic,tau,qpu):
                 1 - <rho_para>  if h_target > 0
                 1 + <rho_para>  if h_target < 0
 
-    
-    """
-    start=time.time()
-    
-    t=Variable("t",float)
-    
-    J_go=-t/tau
-    time_go=np.abs(J_target*tau)
-    oper_ham,pos_oper_ham,coeff_ham=write_ising_ham(nb_spins,h_target,J_go,periodic)
-    Hamiltonian=[Term(coeff_ham[i],oper_ham[i],pos_oper_ham[i]) for i in range(len(oper_ham))]
-    ham=Observable(nb_spins,pauli_terms=Hamiltonian)
-    drive=[(1,ham)]
-    schedule_go=Schedule(drive=drive,tmax=time_go)
 
-    J_back=J_target+t/tau
-    time_back=np.abs(J_target*tau)
-    oper_ham,pos_oper_ham,coeff_ham=write_ising_ham(nb_spins,h_target,J_back,periodic)
-    Hamiltonian=[Term(coeff_ham[i],oper_ham[i],pos_oper_ham[i]) for i in range(len(oper_ham))]
-    ham=Observable(nb_spins,pauli_terms=Hamiltonian)
-    drive=[(1,ham)]
-    schedule_back=Schedule(drive=drive,tmax=time_back)
-    
-    sched_fin=schedule_go|schedule_back
-    if h_target>0:
-        psi_in='0'*nb_spins
+    """
+    start = time.time()
+
+    t = Variable("t", float)
+
+    J_go = -t/tau
+    time_go = np.abs(J_target*tau)
+    oper_ham, pos_oper_ham, coeff_ham = write_ising_ham(nb_spins, h_target, J_go, periodic)
+    Hamiltonian = [Term(coeff_ham[i], oper_ham[i], pos_oper_ham[i]) for i in range(len(oper_ham))]
+    ham = Observable(nb_spins, pauli_terms=Hamiltonian)
+    drive = [(1, ham)]
+    schedule_go = Schedule(drive=drive, tmax=time_go)
+
+    J_back = J_target+t/tau
+    time_back = np.abs(J_target*tau)
+    oper_ham, pos_oper_ham, coeff_ham = write_ising_ham(nb_spins, h_target, J_back, periodic)
+    Hamiltonian = [Term(coeff_ham[i], oper_ham[i], pos_oper_ham[i]) for i in range(len(oper_ham))]
+    ham = Observable(nb_spins, pauli_terms=Hamiltonian)
+    drive = [(1, ham)]
+    schedule_back = Schedule(drive=drive, tmax=time_back)
+
+    sched_fin = schedule_go | schedule_back
+    if h_target > 0:
+        psi_in = '0'*nb_spins
     else:
-        psi_in='1'*nb_spins
-        
-    job_sample=sched_fin.to_job(psi_0=psi_in,observable=density_def_para(nb_spins))
-    res_sample=qpu.submit(job_sample)
-    job_num=res_sample.job_id
+        psi_in = '1'*nb_spins
+
+    job_sample = sched_fin.to_job(psi_0=psi_in, observable=density_def_para(nb_spins))
+    res_sample = qpu.submit(job_sample)
+    job_num = res_sample.job_id
     res_sample.join()
 
-    if h_target>0:
-        result=1-res_sample.value
+    if h_target > 0:
+        result = 1-res_sample.value
     else:
-        result=1+res_sample.value
- 
-        
-    stop=time.time()
-    #print('Run Time:%s'%(stop-start))
-    return result
-####################################################################
+        result = 1+res_sample.value
 
-def quantum_annealing_ising(nb_spins,h_target,J_target,periodic,tau,qpu):
+
+    stop = time.time()
+    # print('Run Time:%s'%(stop-start))
+    return result
+
+
+def quantum_annealing_ising(nb_spins, h_target, J_target, periodic, tau, qpu):
     """
     Automatically selects the correct annealing protocol based on the relative magnitudes of h_target and J_target. Bear in mind that since we are also going back to the initial state if we choose a tau too small we would get very few defects (The state does not change), still it is not a reliable number. Tau should be at least of the order of unity.
 
@@ -264,17 +260,17 @@ def quantum_annealing_ising(nb_spins,h_target,J_target,periodic,tau,qpu):
 
     """
 
-    if np.sign(J_target)>0:
+    if np.sign(J_target) > 0:
         print("This protocol is not valid for the Anti-Ferromagnetic interaction.\n Please choose J<0.")
         sys.exit()
     elif tau < 1:
         print("This protocol is not valid for fast protocol.\n Please choose tau>1.")
         sys.exit()
     else:
-        if np.abs(h_target)>np.abs(J_target):
-            defects=quantum_annealing_para(nb_spins,h_target,J_target,periodic,tau,qpu)
+        if np.abs(h_target) > np.abs(J_target):
+            defects = quantum_annealing_para(nb_spins, h_target, J_target, periodic, tau, qpu)
         else:
-            defects=quantum_annealing_ferro(nb_spins,h_target,J_target,periodic,tau,qpu)
+            defects = quantum_annealing_ferro(nb_spins, h_target, J_target, periodic, tau, qpu)
 
     return defects
     
