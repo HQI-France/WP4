@@ -39,7 +39,6 @@ def write_ising_ham(n, h, J, periodic):
 
     return operator, position, coeff
 
-##################################################################
 
 def sched_rot(angle, axes, n):
     """
